@@ -9,7 +9,7 @@ import os
 import threading
 import queue
 
-version = 0.2
+version = "0.2.1"
 normal = "\033[0;39m"
 red = "\033[1;31m"
 green = "\033[1;32m"
@@ -181,6 +181,9 @@ def main():
     readline.set_completer_delims("\t")
     readline.parse_and_bind("tab: complete")
     readline.set_completer(t.autocomplete_path)
+
+    if not sys.argv[1:]:
+        usage()
 
     if sys.argv[1].startswith("-c") or sys.argv[1].startswith("-t") or sys.argv[1].startswith("-h") or sys.argv[1].startswith("-v"):
         pass
