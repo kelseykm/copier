@@ -9,12 +9,13 @@ import os
 import threading
 import queue
 
-version = "0.2.2"
+version = "0.2.4"
 normal = "\033[0;39m"
 red = "\033[1;31m"
 green = "\033[1;32m"
 orange = "\033[1;33m"
 blue = "\033[1;34m"
+stop_progress = False
 
 class Copier(object):
 
@@ -66,8 +67,8 @@ class Sorter(object):
                 self.add_dirs(f.path)
                 self.enum_dir(f.path)
 
-    def add_dirs(self, dir):
-        self.dir_set.add(dir)
+    def add_dirs(self, directory):
+        self.dir_set.add(directory)
 
     def add_file(self, file):
         self.file_queue.put(file)
@@ -89,13 +90,14 @@ class Sorter(object):
 
     def make_dirs(self):
         self.sort_dirs()
-        for dir in self.sorted_dirs:
-            imp_dir = os.path.basename(self.file)
-            complete_destination = self.destination + "/" + imp_dir + dir.split(imp_dir)[-1]
-
+        for directory in self.sorted_dirs:
+            directory += "/"
+            imp_dir = "/" + os.path.basename(self.file) + "/"
+            destination = self.destination + imp_dir + directory.split(imp_dir)[-1]
+            
             try:
-                os.mkdir(complete_destination)
-                self.copy_stat(dir, complete_destination)
+                os.mkdir(destination)
+                self.copy_stat(directory, destination)
             except FileExistsError:
                 pass
 
@@ -104,17 +106,27 @@ class Sorter(object):
         print(f"{blue}[INFO]{normal} COPYING {orange}{source}{normal} TO {orange}{destination}{normal}")
 
         with open(source, "rb") as s, open(destination, "wb") as d:
+            global stop_progress
+            stop_progress = False
+
             c_obj = Copier(s)
 
             c_obj.number_chunks()
             thread = threading.Thread(target=progress_status, args=(c_obj,))
             thread.start()
 
-            for chunk in c_obj.read_chunks():
-                d.write(chunk)
+            try:
+                for chunk in c_obj.read_chunks():
+                    d.write(chunk)
 
-            thread.join()
-            print(f"{blue}[INFO]{normal} COPYING DONE!")
+                thread.join()
+                print(f"{blue}[INFO]{normal} COPYING DONE!")
+            except Exception as e:
+                stop_progress = True
+
+                thread.join()
+                print(f"{red}[ERROR]{normal} COPYING FAILED: {red}{e}{normal}")
+
 
     def copier(self):
         while True:
@@ -144,7 +156,7 @@ class Autocomplete(object):
 
 def progress_status(c_obj):
     while True:
-        if c_obj.number_of_chunks == c_obj.number_of_read_chunks:
+        if stop_progress or c_obj.number_of_chunks == c_obj.number_of_read_chunks:
             break
         sys.stdout.write(f"{blue}[INFO]{normal} [ {orange}{round(c_obj.number_of_read_chunks/c_obj.number_of_chunks*100, 1)}{normal} % ]")
         sys.stdout.write("\r")
