@@ -9,7 +9,7 @@ import os
 import threading
 import queue
 
-version = "0.2.4"
+version = "0.2.5"
 normal = "\033[0;39m"
 red = "\033[1;31m"
 green = "\033[1;32m"
@@ -30,7 +30,7 @@ class Copier(object):
 
         if file_size == 0:
             self.number_of_chunks = file_size
-        elif not file_size % self.chunk_size == 0:
+        elif file_size != 0 and file_size % self.chunk_size != 0:
             self.number_of_chunks = file_size // self.chunk_size + 1
         else:
             self.number_of_chunks = file_size/self.chunk_size
