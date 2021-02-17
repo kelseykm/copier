@@ -9,7 +9,7 @@ import os
 import threading
 import queue
 
-version = "0.2.5"
+version = "0.2.6"
 normal = "\033[0;39m"
 red = "\033[1;31m"
 green = "\033[1;32m"
@@ -222,6 +222,10 @@ def main():
         files = sys.argv[2]
         if not os.path.exists(files):
             print(f"{red}[ERROR]{normal} {files} DOES NOT EXIST")
+            sys.exit()
+
+        if not os.path.isfile(files):
+            print(f"{red}[ERROR]{normal} {files} IS NOT A REGULAR FILE")
             sys.exit()
 
         with open(files) as f:
