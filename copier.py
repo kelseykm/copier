@@ -9,7 +9,7 @@ import os
 import threading
 import queue
 
-version = "0.2.6"
+version = "0.2.7"
 normal = "\033[0;39m"
 red = "\033[1;31m"
 green = "\033[1;32m"
@@ -195,17 +195,16 @@ def main():
     readline.parse_and_bind("tab: complete")
     readline.set_completer(t.autocomplete_path)
 
-    if not sys.argv[1:]:
+    if not sys.argv[1:] or not sys.argv[1] in ["-c", "-h", "--help", "-t", "-v", "--version"]:
+        usage()
+    elif sys.argv[1] in ["-h", "--help", "-v", "--version"] and sys.argv[2:]:
+        usage()
+    elif not sys.argv[2:] and sys.argv[1] in ["-c", "-t"]:
         usage()
 
-    if sys.argv[1].startswith("-c") or sys.argv[1].startswith("-t") or sys.argv[1].startswith("-h") or sys.argv[1].startswith("-v"):
-        pass
-    else:
+    if sys.argv[1] == "-h" or sys.argv[1] == "--help":
         usage()
-
-    if sys.argv[1] == "-h":
-        usage()
-    elif sys.argv[1] == "-v":
+    elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
         print(f"{blue}[INFO]{normal} VERSION {orange}{version}{normal}")
         sys.exit()
 
