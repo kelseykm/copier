@@ -10,7 +10,7 @@ import threading
 import queue
 import re
 
-version = "0.2.7"
+version = "0.2.8"
 normal = "\033[0;39m"
 red = "\033[1;31m"
 green = "\033[1;32m"
