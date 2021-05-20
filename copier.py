@@ -8,6 +8,7 @@ import glob
 import os
 import threading
 import queue
+import re
 
 version = "0.2.7"
 normal = "\033[0;39m"
@@ -17,7 +18,7 @@ orange = "\033[1;33m"
 blue = "\033[1;34m"
 stop_progress = False
 
-class Copier(object):
+class Copier:
 
     def __init__(self, infile_object):
         self.infile_object = infile_object
@@ -43,7 +44,7 @@ class Copier(object):
             yield chunk
             self.number_of_read_chunks += 1
 
-class Sorter(object):
+class Sorter:
 
     def __init__(self, file, destination):
         self.file = file
@@ -144,15 +145,12 @@ class Sorter(object):
             self.copy_files(file, destination)
             self.copy_stat(file, destination)
 
-class Autocomplete(object):
-
-    def autocomplete_path(self, text, state):
-        line = readline.get_line_buffer().split()
-        if "~" in text:
-            text = os.path.expanduser("~")
-        if os.path.isdir(text):
-            text += "/"
-        return [x for x in glob.glob(text + "*")][state]
+def autocomplete(text, state):
+    if "~" in text:
+        text = re.sub(r"~", os.path.expanduser("~"), text)
+    if os.path.isdir(text) and not text.endswith("/"):
+        text += "/"
+    return glob.glob(text + "*")[state]
 
 def progress_status(c_obj):
     while True:
@@ -190,10 +188,9 @@ Examples:
     sys.exit()
 
 def main():
-    t = Autocomplete()
     readline.set_completer_delims("\t")
     readline.parse_and_bind("tab: complete")
-    readline.set_completer(t.autocomplete_path)
+    readline.set_completer(autocomplete)
 
     if not sys.argv[1:] or not sys.argv[1] in ["-c", "-h", "--help", "-t", "-v", "--version"]:
         usage()
