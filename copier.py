@@ -10,7 +10,7 @@ import threading
 import queue
 import re
 
-version = "0.2.8"
+version = "0.2.9"
 normal = "\033[0;39m"
 red = "\033[1;31m"
 green = "\033[1;32m"
@@ -18,7 +18,7 @@ orange = "\033[1;33m"
 blue = "\033[1;34m"
 stop_progress = False
 
-class Copier:
+class Reader:
 
     def __init__(self, infile_object):
         self.infile_object = infile_object
@@ -44,7 +44,7 @@ class Copier:
             yield chunk
             self.number_of_read_chunks += 1
 
-class Sorter:
+class Copier:
 
     def __init__(self, file, destination):
         self.file = file
@@ -60,13 +60,13 @@ class Sorter:
             self.enum_dir(self.file)
 
     def enum_dir(self, file):
-        gen_ob = os.scandir(file)
-        for f in gen_ob:
-            if f.is_file():
-                self.file_queue.put(f.path)
-            elif f.is_dir():
-                self.add_dirs(f.path)
-                self.enum_dir(f.path)
+        scandir_iter = os.scandir(file)
+        for dir_entry in scandir_iter:
+            if dir_entry.is_file():
+                self.file_queue.put(dir_entry.path)
+            elif dir_entry.is_dir():
+                self.add_dirs(dir_entry.path)
+                self.enum_dir(dir_entry.path)
 
     def add_dirs(self, directory):
         self.dir_set.add(directory)
@@ -95,7 +95,7 @@ class Sorter:
             directory += "/"
             imp_dir = "/" + os.path.basename(self.file) + "/"
             destination = self.destination + imp_dir + directory.split(imp_dir)[-1]
-            
+
             try:
                 os.mkdir(destination)
                 self.copy_stat(directory, destination)
@@ -106,27 +106,27 @@ class Sorter:
 
         print(f"{blue}[INFO]{normal} COPYING {orange}{source}{normal} TO {orange}{destination}{normal}")
 
-        with open(source, "rb") as s, open(destination, "wb") as d:
+        with open(source, "rb") as source_file, open(destination, "wb") as destination_file:
             global stop_progress
             stop_progress = False
 
-            c_obj = Copier(s)
+            reader = Reader(source_file)
 
-            c_obj.number_chunks()
-            thread = threading.Thread(target=progress_status, args=(c_obj,))
+            reader.number_chunks()
+            thread = threading.Thread(target=progress_status, args=(reader,))
             thread.start()
 
             try:
-                for chunk in c_obj.read_chunks():
-                    d.write(chunk)
+                for chunk in reader.read_chunks():
+                    destination_file.write(chunk)
 
                 thread.join()
                 print(f"{blue}[INFO]{normal} COPYING DONE!")
-            except Exception as e:
+            except Exception as raised_exception:
                 stop_progress = True
 
                 thread.join()
-                print(f"{red}[ERROR]{normal} COPYING FAILED: {red}{e}{normal}")
+                print(f"{red}[ERROR]{normal} COPYING FAILED: {red}{raised_exception}{normal}")
 
 
     def copier(self):
@@ -152,11 +152,11 @@ def autocomplete(text, state):
         text += "/"
     return glob.glob(text + "*")[state]
 
-def progress_status(c_obj):
+def progress_status(reader):
     while True:
-        if stop_progress or c_obj.number_of_chunks == c_obj.number_of_read_chunks:
+        if stop_progress or reader.number_of_chunks == reader.number_of_read_chunks:
             break
-        sys.stdout.write(f"{blue}[INFO]{normal} [ {orange}{round(c_obj.number_of_read_chunks/c_obj.number_of_chunks*100, 1)}{normal} % ]")
+        sys.stdout.write(f"{blue}[INFO]{normal} [ {orange}{round(reader.number_of_read_chunks/reader.number_of_chunks*100, 1)}{normal} % ]")
         sys.stdout.write("\r")
         sys.stdout.flush()
 
@@ -224,8 +224,8 @@ def main():
             print(f"{red}[ERROR]{normal} {files} IS NOT A REGULAR FILE")
             sys.exit()
 
-        with open(files) as f:
-            infiles = [ os.path.abspath(file.strip()) for file in f.readlines() ]
+        with open(files) as file_paths:
+            infiles = [ os.path.abspath(file.strip()) for file in file_paths.readlines() ]
 
         error = False
         for file in infiles:
@@ -236,10 +236,10 @@ def main():
             sys.exit()
 
         for file in infiles:
-            obj = Sorter(os.path.abspath(file), dst)
-            obj.check_type()
-            obj.make_dirs()
-            obj.copier()
+            copier = Copier(os.path.abspath(file), dst)
+            copier.check_type()
+            copier.make_dirs()
+            copier.copier()
     elif sys.argv[1] == "-c":
         files = sys.argv[2:]
 
@@ -252,10 +252,10 @@ def main():
             sys.exit()
 
         for file in files:
-            obj = Sorter(os.path.abspath(file), dst)
-            obj.check_type()
-            obj.make_dirs()
-            obj.copier()
+            copier = Copier(os.path.abspath(file), dst)
+            copier.check_type()
+            copier.make_dirs()
+            copier.copier()
 
 if __name__ == "__main__":
     main()
